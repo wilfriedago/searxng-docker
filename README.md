@@ -2,6 +2,15 @@
 
 Create a new SearXNG instance in five minutes using Docker
 
+## 🚀 Automated VPS Deployment
+
+This repository includes GitHub Actions for automated deployment to a VPS! See the [Deployment Guide](scripts/README.md) for setup instructions.
+
+**Quick Setup:**
+1. Configure GitHub Secrets (VPS_SSH_KEY, VPS_HOST, VPS_USER, VPS_DEPLOY_PATH)
+2. Push to main branch
+3. Your SearXNG instance will be automatically deployed! ✨
+
 ## What is included?
 
 | Name                                          | Description                                                    | Docker image                                                                 | Dockerfile                                                                                                                                                                                    |
@@ -28,7 +37,7 @@ cd searxng-docker
 ```
 
 3. Edit the [.env](https://github.com/searxng/searxng-docker/blob/master/.env) file to set the hostname and an email
-4. Generate the secret key `sed -i "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`  
+4. Generate the secret key `sed -i "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`
    On a Mac: `sed -i '' "s|ultrasecretkey|$(openssl rand -hex 32)|g" searxng/settings.yml`
 5. Edit [searxng/settings.yml](https://github.com/searxng/searxng-docker/blob/master/searxng/settings.yml) according to
    your needs
@@ -102,13 +111,40 @@ Supported architecture:
 
 ## How to update ?
 
-To update the SearXNG stack:
+### Manual Update
+To update the SearXNG stack manually:
 
 ```sh
 git pull
 docker compose pull
 docker compose up -d
 ```
+
+### Automated Updates via GitHub Actions
+For VPS deployments, updates are automated:
+- Push changes to the `main` branch
+- GitHub Actions will automatically deploy updates
+- Backups are created before each deployment
+- Health checks verify successful deployment
+
+### Using Deployment Scripts
+For local or manual VPS management:
+
+```sh
+# Deploy with automatic backup and health checks
+./scripts/deploy.sh
+
+# Create a backup before major changes
+./scripts/backup.sh "before-major-update"
+
+# Check system health
+./scripts/health-check.sh
+
+# Restore from backup if needed
+./scripts/restore.sh "backup-name"
+```
+
+See [scripts.md](docs/scripts.md) for detailed documentation.
 
 Or the old way (with the old docker-compose version):
 
