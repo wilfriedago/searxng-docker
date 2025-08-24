@@ -107,7 +107,7 @@ generate_secret() {
 setup_scripts() {
     log "Setting up deployment scripts..."
 
-    chmod +x *.sh
+    chmod +x scripts/*.sh
 
     success "Deployment scripts are now executable"
 }
