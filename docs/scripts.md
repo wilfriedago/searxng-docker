@@ -127,7 +127,6 @@ Create `.env` file on VPS with your configuration:
 ```bash
 # /opt/searxng/.env
 SEARXNG_HOSTNAME=your-domain.com
-LETSENCRYPT_EMAIL=your-email@domain.com
 ```
 
 ## Monitoring and Maintenance

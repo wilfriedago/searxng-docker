@@ -60,12 +60,6 @@ setup_environment() {
     read -p "Enter your domain name (or 'localhost' for local testing): " hostname
     hostname=${hostname:-localhost}
 
-    # Prompt for email if not localhost
-    if [ "$hostname" != "localhost" ]; then
-        read -p "Enter your email for Let's Encrypt SSL certificates: " email
-        sed -i.bak "s/LETSENCRYPT_EMAIL=/LETSENCRYPT_EMAIL=$email/" .env
-    fi
-
     # Update hostname
     sed -i.bak "s/SEARXNG_HOSTNAME=localhost/SEARXNG_HOSTNAME=$hostname/" .env
 
