@@ -17,33 +17,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Run deployment script
-      uses: appleboy/ssh-action@v1
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_KEY }}
-        port: ${{ secrets.SSH_PORT }}
-        script: |
-          cd ${{ secrets.DEPLOY_PATH }}
-          echo '🚀 Starting deployment...'
-          ./scripts/deploy.sh ${{ github.event.inputs.force_rebuild || 'false' }}
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_KEY }}
+          log-public-key: false
 
-    - name: Notify deployment status
-      if: always()
-      run: |
-        if [ ${{ job.status }} == 'success' ]; then
-          echo "✅ Deployment completed successfully"
-          echo "📊 Deployment summary:"
-          echo "  - Repository: ${{ github.repository }}"
-          echo "  - Branch: ${{ github.ref_name }}"
-          echo "  - Commit: ${{ github.sha }}"
-          echo "  - Triggered by: ${{ github.event_name }}"
-        else
-          echo "❌ Deployment failed"
-          echo "📊 Failure details:"
-          echo "  - Repository: ${{ github.repository }}"
-          echo "  - Branch: ${{ github.ref_name }}"
-          echo "  - Commit: ${{ github.sha }}"
-          exit 1
-        fi
+      - name: Add VPS to known hosts
+        run: |
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
+      - name: Deploy on VPS
+        run: |
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+            cd ${{ secrets.DEPLOY_PATH }} &&
+            echo '🚀 Starting deployment...' &&
+            ./scripts/deploy.sh ${{ github.event.inputs.force_rebuild || 'false' }}
+          "
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ Deployment completed successfully"
+            echo "📊 Deployment summary:"
+            echo "  - Repository: ${{ github.repository }}"
+            echo "  - Branch: ${{ github.ref_name }}"
+            echo "  - Commit: ${{ github.sha }}"
+            echo "  - Triggered by: ${{ github.event_name }}"
+          else
+            echo "❌ Deployment failed"
+            echo "📊 Failure details:"
+            echo "  - Repository: ${{ github.repository }}"
+            echo "  - Branch: ${{ github.ref_name }}"
+            echo "  - Commit: ${{ github.sha }}"
+            exit 1
+          fi
