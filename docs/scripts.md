@@ -23,7 +23,7 @@ Main deployment script that handles the complete deployment process:
 
 ### `backup.sh`
 Creates comprehensive backups of your SearXNG installation:
-- ✅ Backs up all Docker volumes (Caddy, Redis, SearXNG data)
+- ✅ Backs up all Docker volumes (Redis, SearXNG data)
 - ✅ Backs up configuration files
 - ✅ Creates metadata with system information
 - ✅ Organizes backups with timestamps

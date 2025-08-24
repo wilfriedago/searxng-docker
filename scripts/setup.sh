@@ -150,7 +150,6 @@ show_completion() {
     echo "Configuration files:"
     echo "• Environment: .env"
     echo "• SearXNG settings: searxng/settings.yml"
-    echo "• Reverse proxy: Caddyfile"
     echo ""
     echo "For VPS deployment setup, see: scripts/README.md"
     echo ""

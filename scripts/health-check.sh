@@ -119,7 +119,7 @@ check_services() {
 check_volumes() {
     log "Checking Docker volumes..."
 
-    local volumes=("searxng_caddy-data" "searxng_caddy-config" "searxng_redis-data" "searxng_searxng-data")
+    local volumes=("searxng_redis-data" "searxng_searxng-data")
     local all_present=true
 
     for volume in "${volumes[@]}"; do
@@ -180,7 +180,7 @@ check_memory() {
 check_logs() {
     log "Checking container logs for recent errors..."
 
-    local containers=("caddy" "redis" "searxng")
+    local containers=("redis" "searxng")
     local critical_errors=0
 
     for container in "${containers[@]}"; do

@@ -89,13 +89,6 @@ restore_configs() {
         success "SearXNG configuration restored"
     fi
 
-    # Restore Caddyfile
-    if [ -f "$BACKUP_DIR/Caddyfile" ]; then
-        log "Restoring Caddyfile..."
-        cp "$BACKUP_DIR/Caddyfile" .
-        success "Caddyfile restored"
-    fi
-
     # Restore docker-compose.yaml
     if [ -f "$BACKUP_DIR/docker-compose.yaml" ]; then
         log "Restoring docker-compose.yaml..."
@@ -116,23 +109,7 @@ restore_volumes() {
     log "Restoring Docker volumes..."
 
     # Remove existing volumes
-    docker volume rm searxng_caddy-data searxng_caddy-config searxng_redis-data searxng_searxng-data 2>/dev/null || true
-
-    # Restore Caddy data
-    if [ -f "$BACKUP_DIR/caddy-data.tar.gz" ]; then
-        log "Restoring Caddy data volume..."
-        docker volume create searxng_caddy-data
-        docker run --rm -v searxng_caddy-data:/target -v "$(pwd)/$BACKUP_DIR":/backup alpine tar xzf /backup/caddy-data.tar.gz -C /target
-        success "Caddy data volume restored"
-    fi
-
-    # Restore Caddy config
-    if [ -f "$BACKUP_DIR/caddy-config.tar.gz" ]; then
-        log "Restoring Caddy config volume..."
-        docker volume create searxng_caddy-config
-        docker run --rm -v searxng_caddy-config:/target -v "$(pwd)/$BACKUP_DIR":/backup alpine tar xzf /backup/caddy-config.tar.gz -C /target
-        success "Caddy config volume restored"
-    fi
+    docker volume rm searxng_redis-data searxng_searxng-data 2>/dev/null || true
 
     # Restore Redis data
     if [ -f "$BACKUP_DIR/redis-data.tar.gz" ]; then

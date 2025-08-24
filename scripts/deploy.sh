@@ -122,11 +122,6 @@ create_backup() {
     echo "Date: $(date)" >> "$BACKUP_DIR/git-info.txt"
 
     # Backup volumes data if they exist
-    if docker volume ls | grep -q "searxng_caddy-data"; then
-        log "Backing up Caddy data..."
-        docker run --rm -v searxng_caddy-data:/source -v "$(pwd)/$BACKUP_DIR":/backup alpine tar czf /backup/caddy-data.tar.gz -C /source .
-    fi
-
     if docker volume ls | grep -q "searxng_redis-data"; then
         log "Backing up Redis data..."
         docker run --rm -v searxng_redis-data:/source -v "$(pwd)/$BACKUP_DIR":/backup alpine tar czf /backup/redis-data.tar.gz -C /source .
@@ -139,7 +134,6 @@ create_backup() {
 
     # Backup configuration files
     cp -r searxng "$BACKUP_DIR/" 2>/dev/null || warning "SearXNG config directory not found"
-    cp Caddyfile "$BACKUP_DIR/" 2>/dev/null || warning "Caddyfile not found"
     cp docker-compose.yaml "$BACKUP_DIR/" || error "docker-compose.yaml not found"
 
     success "Backup created at $BACKUP_DIR"

@@ -47,15 +47,6 @@ create_backup_dir() {
 backup_volumes() {
     log "Backing up Docker volumes..."
 
-    # Backup Caddy data
-    if docker volume ls | grep -q "searxng_caddy-data"; then
-        log "Backing up Caddy data volume..."
-        docker run --rm -v searxng_caddy-data:/source -v "$(pwd)/$BACKUP_DIR":/backup alpine tar czf /backup/caddy-data.tar.gz -C /source .
-        success "Caddy data backed up"
-    else
-        log "Caddy data volume not found, skipping..."
-    fi
-
     # Backup Redis data
     if docker volume ls | grep -q "searxng_redis-data"; then
         log "Backing up Redis data volume..."
@@ -73,15 +64,6 @@ backup_volumes() {
     else
         log "SearXNG data volume not found, skipping..."
     fi
-
-    # Backup Caddy config
-    if docker volume ls | grep -q "searxng_caddy-config"; then
-        log "Backing up Caddy config volume..."
-        docker run --rm -v searxng_caddy-config:/source -v "$(pwd)/$BACKUP_DIR":/backup alpine tar czf /backup/caddy-config.tar.gz -C /source .
-        success "Caddy config backed up"
-    else
-        log "Caddy config volume not found, skipping..."
-    fi
 }
 
 # Backup configuration files
@@ -94,14 +76,6 @@ backup_configs() {
         success "SearXNG configuration backed up"
     else
         log "SearXNG config directory not found, skipping..."
-    fi
-
-    # Backup Caddyfile
-    if [ -f "Caddyfile" ]; then
-        cp Caddyfile "$BACKUP_DIR/"
-        success "Caddyfile backed up"
-    else
-        log "Caddyfile not found, skipping..."
     fi
 
     # Backup docker-compose.yaml
@@ -135,7 +109,7 @@ Docker Compose Status:
 $(docker compose ps 2>/dev/null || echo "Docker Compose not available")
 
 Docker Images:
-$(docker images --filter "reference=*searxng*" --filter "reference=*caddy*" --filter "reference=*valkey*" 2>/dev/null || echo "Docker not available")
+$(docker images --filter "reference=*searxng*" --filter "reference=*valkey*" 2>/dev/null || echo "Docker not available")
 
 Docker Volumes:
 $(docker volume ls --filter "name=searxng_*" 2>/dev/null || echo "Docker not available")
