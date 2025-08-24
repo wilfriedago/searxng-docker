@@ -91,32 +91,19 @@ check_services() {
         ((service_issues++))
     fi
 
-    # Check if Caddy is serving content (use ss instead of netstat)
     if command -v ss >/dev/null 2>&1; then
-        if ss -tuln | grep -q ":80\|:443"; then
-            success "Caddy is listening on HTTP/HTTPS ports"
-        else
-            warning "Caddy may not be listening on standard ports (check Caddyfile configuration)"
-            ((service_issues++))
-        fi
-    elif command -v netstat >/dev/null 2>&1; then
-        if netstat -tuln | grep -q ":80\|:443"; then
+        if ss -tuln | grep -E ":80\s|:443\s|\*:80|\*:443"; then
             success "Caddy is listening on HTTP/HTTPS ports"
         else
             warning "Caddy may not be listening on standard ports (check Caddyfile configuration)"
             ((service_issues++))
         fi
     else
-        # Try to check if Caddy container is exposing ports
-        if docker port caddy 2>/dev/null | grep -q "80\|443"; then
-            success "Caddy container has HTTP/HTTPS ports configured"
+        warning "Cannot verify Caddy port configuration (ss not available)"
+        if [ "$CI_MODE" = "true" ]; then
+            log "Skipping port check in CI mode"
         else
-            warning "Cannot verify Caddy port configuration (netstat/ss not available)"
-            if [ "$CI_MODE" = "true" ]; then
-                log "Skipping port check in CI mode"
-            else
-                ((service_issues++))
-            fi
+            ((service_issues++))
         fi
     fi
 
