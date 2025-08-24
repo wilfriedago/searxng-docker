@@ -49,7 +49,7 @@ check_docker() {
 check_containers() {
     log "Checking container status..."
 
-    local containers=("caddy" "redis" "searxng")
+    local containers=("redis" "searxng")
     local all_healthy=true
 
     for container in "${containers[@]}"; do
@@ -91,20 +91,19 @@ check_services() {
         ((service_issues++))
     fi
 
-    if command -v ss >/dev/null 2>&1; then
-        if ss -tuln | grep -E ":80\s|:443\s|\*:80|\*:443"; then
+    if systemctl is-active --quiet caddy; then
+        success "Caddy service is running"
+
+        # Check if Caddy is listening on HTTP/HTTPS ports
+        if ss -tuln | grep -E ":80\s|:443\s|\*:80|\*:443" >/dev/null; then
             success "Caddy is listening on HTTP/HTTPS ports"
         else
-            warning "Caddy may not be listening on standard ports (check Caddyfile configuration)"
+            warning "Caddy may not be listening on standard ports"
             ((service_issues++))
         fi
     else
-        warning "Cannot verify Caddy port configuration (ss not available)"
-        if [ "$CI_MODE" = "true" ]; then
-            log "Skipping port check in CI mode"
-        else
-            ((service_issues++))
-        fi
+        warning "Caddy service is not running"
+        ((service_issues++))
     fi
 
     # In CI mode, don't fail on service connectivity issues
