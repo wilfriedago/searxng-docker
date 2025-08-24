@@ -4,3 +4,24 @@ searxng-docker.service
 caddy
 srv
 searxng/uwsgi.ini
+
+# Environment files
+.env
+
+# Deployment backups and logs
+backups/
+*.log
+deploy.log
+
+# SSH keys
+*.pem
+*.key
+id_rsa*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
