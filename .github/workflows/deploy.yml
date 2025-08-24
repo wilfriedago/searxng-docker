@@ -17,19 +17,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Setup SSH Agent
-      uses: webfactory/ssh-agent@v0.9.0
+    - name: Run deployment script
+      uses: appleboy/ssh-action@v1
       with:
-        ssh-private-key: ${{ secrets.SSH_KEY }}
-        log-public-key: false
-
-    - name: Deploy on VPS
-      run: |
-        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        script: |
           cd ${{ secrets.DEPLOY_PATH }} &&
           echo '🚀 Starting deployment...' &&
           ./scripts/deploy.sh ${{ github.event.inputs.force_rebuild || 'false' }}
-        "
 
     - name: Notify deployment status
       if: always()

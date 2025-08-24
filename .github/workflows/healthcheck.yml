@@ -21,15 +21,14 @@ jobs:
     if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
 
     steps:
-    - name: Setup SSH Agent
-      uses: webfactory/ssh-agent@v0.9.0
+    - name: Run deployment script
+      uses: appleboy/ssh-action@v1
       with:
-        ssh-private-key: ${{ secrets.SSH_KEY }}
-        log-public-key: false
-
-    - name: Run health check
-      run: |
-        ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_KEY }}
+        port: ${{ secrets.SSH_PORT }}
+        script: |
           cd ${{ secrets.DEPLOY_PATH }}
           echo "🏥 Running health check..."
           echo "📍 Current directory: $(pwd)"
@@ -42,7 +41,6 @@ jobs:
           else
             ./scripts/health-check.sh
           fi
-        EOF
 
     - name: Notify health check status
       if: always()
