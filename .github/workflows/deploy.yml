@@ -25,8 +25,8 @@ jobs:
         key: ${{ secrets.SSH_KEY }}
         port: ${{ secrets.SSH_PORT }}
         script: |
-          cd ${{ secrets.DEPLOY_PATH }} &&
-          echo '🚀 Starting deployment...' &&
+          cd ${{ secrets.DEPLOY_PATH }}
+          echo '🚀 Starting deployment...'
           ./scripts/deploy.sh ${{ github.event.inputs.force_rebuild || 'false' }}
 
     - name: Notify deployment status
