@@ -1,0 +1,82 @@
+name: Health Check
+
+on:
+  workflow_run:
+    workflows: ["Deploy to VPS"]
+    types:
+      - completed
+  workflow_dispatch:
+    inputs:
+      verbose:
+        description: 'Enable verbose health check output'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  health-check:
+    name: Run Health Check
+    runs-on: ubuntu-latest
+    # Only run if the deploy workflow succeeded or if manually triggered
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name == 'workflow_dispatch' }}
+
+    steps:
+    - name: Setup SSH Agent
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_KEY }}
+        log-public-key: false
+
+    - name: Run health check
+      run: |
+        ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          cd ${{ secrets.DEPLOY_PATH }}
+          echo "🏥 Running health check..."
+          echo "📍 Current directory: $(pwd)"
+          echo "📋 Latest commit: $(git log -1 --oneline)"
+
+          # Run health check with optional verbose flag
+          if [ "${{ github.event.inputs.verbose || 'false' }}" = "true" ]; then
+            echo "🔍 Running verbose health check..."
+            ./scripts/health-check.sh --verbose
+          else
+            ./scripts/health-check.sh
+          fi
+        EOF
+
+    - name: Notify health check status
+      if: always()
+      run: |
+        if [ ${{ job.status }} == 'success' ]; then
+          echo "✅ Health check passed successfully"
+          echo "📊 Health check summary:"
+          echo "  - Triggered by: ${{ github.event_name }}"
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "  - Deploy workflow: ${{ github.event.workflow_run.conclusion }}"
+            echo "  - Deploy commit: ${{ github.event.workflow_run.head_sha }}"
+          fi
+        else
+          echo "❌ Health check failed"
+          echo "🚨 Health check failure details:"
+          echo "  - Triggered by: ${{ github.event_name }}"
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            echo "  - Deploy workflow: ${{ github.event.workflow_run.conclusion }}"
+            echo "  - Deploy commit: ${{ github.event.workflow_run.head_sha }}"
+          fi
+          exit 1
+        fi
+
+  notify-failure:
+    name: Handle Deploy Failure
+    runs-on: ubuntu-latest
+    # Only run if the deploy workflow failed
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+
+    steps:
+    - name: Notify deploy failure
+      run: |
+        echo "⚠️ Skipping health check because deployment failed"
+        echo "📊 Deploy failure details:"
+        echo "  - Deploy workflow: ${{ github.event.workflow_run.conclusion }}"
+        echo "  - Deploy commit: ${{ github.event.workflow_run.head_sha }}"
+        echo "  - Please check the deployment logs before running health checks"

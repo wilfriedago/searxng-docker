@@ -17,40 +17,36 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup SSH key
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts
-
-    - name: Copy files to VPS
-      run: |
-        scp -r ./* ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ secrets.VPS_DEPLOY_PATH }}/
+    - name: Setup SSH Agent
+      uses: webfactory/ssh-agent@v0.9.0
+      with:
+        ssh-private-key: ${{ secrets.SSH_KEY }}
+        log-public-key: false
 
     - name: Deploy on VPS
       run: |
-        ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-          cd ${{ secrets.VPS_DEPLOY_PATH }}
+        ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
+          cd ${{ secrets.DEPLOY_PATH }}
 
-          # Make scripts executable
-          chmod +x scripts/deploy.sh
-          chmod +x scripts/backup.sh
-          chmod +x scripts/restore.sh
-          chmod +x scripts/health-check.sh
+          # Ensure we're on the main branch
+          git checkout main
 
-          # Run deployment script
+          # Pull latest changes from origin
+          echo "📥 Pulling latest changes from repository..."
+          git pull origin main
+
+          # Check if pull was successful
+          if [ $? -ne 0 ]; then
+            echo "❌ Failed to pull changes from git repository"
+            exit 1
+          fi
+
+          # Get the latest commit info for logging
+          echo "📋 Latest commit: $(git log -1 --oneline)"
+          echo "🚀 Starting deployment..."
+
+          # Run deployment script with force_rebuild parameter
           ./scripts/deploy.sh ${{ github.event.inputs.force_rebuild || 'false' }}
-        EOF
-
-    - name: Health check
-      run: |
-        ssh ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} << 'EOF'
-          cd ${{ secrets.VPS_DEPLOY_PATH }}
-          ./scripts/health-check.sh
         EOF
 
     - name: Notify deployment status
@@ -58,7 +54,16 @@ jobs:
       run: |
         if [ ${{ job.status }} == 'success' ]; then
           echo "✅ Deployment completed successfully"
+          echo "📊 Deployment summary:"
+          echo "  - Repository: ${{ github.repository }}"
+          echo "  - Branch: ${{ github.ref_name }}"
+          echo "  - Commit: ${{ github.sha }}"
+          echo "  - Triggered by: ${{ github.event_name }}"
         else
           echo "❌ Deployment failed"
+          echo "📊 Failure details:"
+          echo "  - Repository: ${{ github.repository }}"
+          echo "  - Branch: ${{ github.ref_name }}"
+          echo "  - Commit: ${{ github.sha }}"
           exit 1
         fi
