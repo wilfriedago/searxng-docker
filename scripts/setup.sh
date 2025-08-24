@@ -89,13 +89,7 @@ generate_secret() {
         fi
 
         # Replace in settings file
-        if [[ "$OSTYPE" == "darwin"* ]]; then
-            # macOS
-            sed -i '' "s|ultrasecretkey|$secret|g" searxng/settings.yml
-        else
-            # Linux
-            sed -i "s|ultrasecretkey|$secret|g" searxng/settings.yml
-        fi
+        sed -i "s|ultrasecretkey|$secret|g" searxng/settings.yml
 
         success "Secret key generated and updated in searxng/settings.yml"
     else

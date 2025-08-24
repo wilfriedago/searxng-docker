@@ -66,7 +66,7 @@ update_code() {
 
     # Pull latest changes
     log "Pulling latest changes from origin..."
-    if ! git pull origin main; then
+    if ! git pull origin main --rebase --autostash --no-edit; then
         error "Failed to pull changes from git repository"
     fi
 
