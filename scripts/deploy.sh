@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# deploy.sh - Main deployment script for SearXNG Docker stack
-# Usage: ./deploy.sh [force_rebuild]
+# deploy.sh - Main deployment script for SearXNG Docker stack with Git integration
+# Usage: ./deploy.sh [force_rebuild] [skip_git]
 
 set -e
 
 FORCE_REBUILD=${1:-false}
+SKIP_GIT=${2:-false}
 BACKUP_DIR="backups/$(date +%Y%m%d-%H%M%S)"
 LOG_FILE="deploy.log"
 
@@ -33,6 +34,59 @@ success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1" | tee -a "$LOG_FILE"
 }
 
+# Update code from git repository
+update_code() {
+    if [ "$SKIP_GIT" = "true" ]; then
+        log "Skipping git operations as requested"
+        return 0
+    fi
+
+    log "📥 Updating code from git repository..."
+
+    # Check if we're in a git repository
+    if [ ! -d ".git" ]; then
+        error "Not in a git repository. Please ensure you're in the project root."
+    fi
+
+    # Get current branch
+    CURRENT_BRANCH=$(git branch --show-current)
+    log "Current branch: $CURRENT_BRANCH"
+
+    # Stash any local changes
+    if ! git diff --quiet || ! git diff --cached --quiet; then
+        warning "Local changes detected. Stashing them..."
+        git stash push -m "Auto-stash before deployment $(date)"
+    fi
+
+    # Ensure we're on the main branch
+    if [ "$CURRENT_BRANCH" != "main" ]; then
+        log "Switching to main branch..."
+        git checkout main || error "Failed to checkout main branch"
+    fi
+
+    # Pull latest changes
+    log "Pulling latest changes from origin..."
+    if ! git pull origin main; then
+        error "Failed to pull changes from git repository"
+    fi
+
+    # Get commit information
+    LATEST_COMMIT=$(git log -1 --oneline)
+    COMMIT_HASH=$(git rev-parse --short HEAD)
+    COMMIT_AUTHOR=$(git log -1 --pretty=format:'%an')
+    COMMIT_DATE=$(git log -1 --pretty=format:'%cd' --date=short)
+
+    log "📋 Latest commit: $LATEST_COMMIT"
+    log "👤 Author: $COMMIT_AUTHOR"
+    log "📅 Date: $COMMIT_DATE"
+    log "🔗 Commit hash: $COMMIT_HASH"
+
+    # Make scripts executable (in case they weren't committed as executable)
+    chmod +x scripts/*.sh 2>/dev/null || warning "No scripts found in scripts/ directory"
+
+    success "Code updated successfully"
+}
+
 # Check if Docker and Docker Compose are installed
 check_dependencies() {
     log "Checking dependencies..."
@@ -43,6 +97,10 @@ check_dependencies() {
 
     if ! command -v docker compose &> /dev/null; then
         error "Docker Compose is not installed"
+    fi
+
+    if ! command -v git &> /dev/null; then
+        error "Git is not installed"
     fi
 
     success "Dependencies check passed"
@@ -57,6 +115,11 @@ create_backup() {
     fi
 
     mkdir -p "$BACKUP_DIR"
+
+    # Backup git information
+    echo "Git commit: $(git rev-parse HEAD)" > "$BACKUP_DIR/git-info.txt"
+    echo "Branch: $(git branch --show-current)" >> "$BACKUP_DIR/git-info.txt"
+    echo "Date: $(date)" >> "$BACKUP_DIR/git-info.txt"
 
     # Backup volumes data if they exist
     if docker volume ls | grep -q "searxng_caddy-data"; then
@@ -149,22 +212,61 @@ wait_for_services() {
     error "Services failed to start properly"
 }
 
+# Show deployment summary
+show_summary() {
+    log "📊 Deployment Summary:"
+    log "===================="
+
+    if [ "$SKIP_GIT" != "true" ]; then
+        log "🔗 Deployed commit: $(git rev-parse --short HEAD)"
+        log "👤 Author: $(git log -1 --pretty=format:'%an')"
+        log "📅 Commit date: $(git log -1 --pretty=format:'%cd' --date=short)"
+        log "📝 Message: $(git log -1 --pretty=format:'%s')"
+    fi
+
+    log "💾 Backup location: $BACKUP_DIR"
+    log "🔧 Force rebuild: $FORCE_REBUILD"
+    log "⏰ Deployment time: $(date)"
+
+    echo ""
+    log "📋 Next steps:"
+    log "  • Check service status: docker compose ps"
+    log "  • View logs: docker compose logs -f"
+    log "  • Health check: ./scripts/health-check.sh"
+}
+
 # Main deployment process
 main() {
-    log "Starting deployment process..."
+    log "🚀 Starting deployment process..."
+    log "Parameters: force_rebuild=$FORCE_REBUILD, skip_git=$SKIP_GIT"
 
     check_dependencies
+    update_code
     create_backup
     pull_images
     deploy_stack
     wait_for_services
     cleanup
+    show_summary
 
-    success "Deployment completed successfully!"
-    log "Backup available at: $BACKUP_DIR"
-    log "Check service status with: docker compose ps"
-    log "View logs with: docker compose logs -f"
+    success "✅ Deployment completed successfully!"
 }
+
+# Handle script arguments
+if [ "$1" = "--help" ] || [ "$1" = "-h" ]; then
+    echo "Usage: $0 [force_rebuild] [skip_git]"
+    echo ""
+    echo "Arguments:"
+    echo "  force_rebuild  - Set to 'true' to force rebuild containers (default: false)"
+    echo "  skip_git      - Set to 'true' to skip git operations (default: false)"
+    echo ""
+    echo "Examples:"
+    echo "  $0                    # Normal deployment"
+    echo "  $0 true               # Force rebuild containers"
+    echo "  $0 false true         # Skip git operations"
+    echo "  $0 true false         # Force rebuild with git update"
+    exit 0
+fi
 
 # Run main function
 main "$@"

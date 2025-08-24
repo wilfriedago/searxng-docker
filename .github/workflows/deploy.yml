@@ -23,31 +23,17 @@ jobs:
         ssh-private-key: ${{ secrets.SSH_KEY }}
         log-public-key: false
 
+    - name: Add VPS to known hosts
+      run: |
+        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+
     - name: Deploy on VPS
       run: |
-        ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} << 'EOF'
-          cd ${{ secrets.DEPLOY_PATH }}
-
-          # Ensure we're on the main branch
-          git checkout main
-
-          # Pull latest changes from origin
-          echo "📥 Pulling latest changes from repository..."
-          git pull origin main
-
-          # Check if pull was successful
-          if [ $? -ne 0 ]; then
-            echo "❌ Failed to pull changes from git repository"
-            exit 1
-          fi
-
-          # Get the latest commit info for logging
-          echo "📋 Latest commit: $(git log -1 --oneline)"
-          echo "🚀 Starting deployment..."
-
-          # Run deployment script with force_rebuild parameter
+        ssh -o BatchMode=yes -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          cd ${{ secrets.DEPLOY_PATH }} &&
+          echo '🚀 Starting deployment...' &&
           ./scripts/deploy.sh ${{ github.event.inputs.force_rebuild || 'false' }}
-        EOF
+        "
 
     - name: Notify deployment status
       if: always()
